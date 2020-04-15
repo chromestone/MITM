@@ -630,8 +630,8 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
                 "Attacker Username: " + authCtx.username + "\n" +
                 "Attacker Password: " + credential + "\n" +
                 "Date: " + moment().format("YYYY-MM-DD HH:mm:ss.SSS") + "\n" +
-                "Session ID: " + sessionId + "\n" +
-                "-------- Attacker Stream Below ---------\n";
+                "Session ID: " + sessionId + "\n-------- Attacker Keystrokes ----------\n";// + "\n" +
+                //"-------- Attacker Stream Below ---------\n";
 
             let metadataBuffer = new Buffer.from(metadata, "utf-8");
             screenWriteGZIP.write(metadataBuffer);
@@ -749,10 +749,12 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 terminal: true
             });
 
-            let keystrokeFullBuffer = '';
+            // let keystrokeFullBuffer = '';
 
             reader.on('line', function (line) {
-                debugLog('[SHELL] line from reader: ' + line.toString());
+                let lStr = line.toString();
+                screenWriteStream.write(moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(lStr) + "\n");
+                debugLog('[SHELL] line from reader: ' + lStr);
                 debugLog('[SHELL] Keystroke buffer: ' + keystrokeBuffer);
                 /*socket.emit('command', {
                   sessionId : sessionId,
@@ -764,12 +766,12 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
             });
 
             lxcStream.on('data', function (data) {
-                screenWriteStream.write(data); // write screen to disk
+                // screenWriteStream.write(data); // write screen to disk
                 attackerStream.write(data);
             });
             attackerStream.on('data', function (data) {
                 debugLog('[SHELL] Attacker Keystroke: ' + printAscii(data.toString()));
-                keystrokeFullBuffer += moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(data.toString()) + "\n";
+                // keystrokeFullBuffer += moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(data.toString()) + "\n";
                 let lxcStr = '';
                 // record all char code of keystrokes
                 let dataString = data.toString();
@@ -802,8 +804,8 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 debugLog('[SHELL] Attacker ended the shell');
 
                 // Keystroke Writing
-                screenWriteStream.write("-------- Attacker Keystrokes ----------\n");
-                screenWriteStream.write(keystrokeFullBuffer);
+                // screenWriteStream.write("-------- Attacker Keystrokes ----------\n");
+                // screenWriteStream.write(keystrokeFullBuffer);
                 lxcStream.end();
             });
 
