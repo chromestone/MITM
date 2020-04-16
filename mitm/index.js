@@ -728,7 +728,7 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
             }
             attackerStream = accept();
             lxcStream.on('data', function (data) {
-                screenWriteStream.write(data); // log command results to disk
+                //screenWriteStream.write(data); // log command results to disk
                 attackerStream.write(data);
             });
             lxcStream.on('close', function () {
