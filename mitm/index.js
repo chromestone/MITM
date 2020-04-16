@@ -363,7 +363,7 @@ function handleAttackerAuth(attacker, cb) {
 
                 let giant_string = path.resolve(config.logging.logins, containerID + "_" + moment().format("YYYY-MM-DD") + ".txt");
                 logins = fs.createWriteStream(giant_string, {flags:'a'});
-                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ': -------- Compromised ----------')
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';-------- Compromised ----------\n')
 
             } else if (autoAccess === true && autoBarrier === true) {
                 // Barrier has not yet been broken
