@@ -63,7 +63,8 @@ let pool = null;
 let scrambler_dict = {};
 
 // Logging files
-var loginAttempts, logins, delimiter = ';';
+//var loginAttempts,
+var logins, delimiter = ';';
 
 /************************************************************************************
  * ---------------------- MITM Global Variables END Block ---------------------------
@@ -196,11 +197,11 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
 
         // makes the attacker session screen output folder if not already created
         initialize.makeOutputFolder(config.logging.streamOutput);
-        initialize.makeOutputFolder(config.logging.loginAttempts);
+        //initialize.makeOutputFolder(config.logging.loginAttempts);
         initialize.makeOutputFolder(config.logging.logins);
 
-        loginAttempts   = fs.createWriteStream(path.resolve(config.logging.loginAttempts, containerID + ".txt"), {flags:'a'});
-        logins          = fs.createWriteStream(path.resolve(config.logging.logins, containerID + ".txt"), {flags:'a'});
+        //loginAttempts   = fs.createWriteStream(path.resolve(config.logging.loginAttempts, containerID + ".txt"), {flags:'a'});
+        //logins          = fs.createWriteStream(path.resolve(config.logging.logins, containerID + ".txt"), {flags:'a'});
     }
 
     // loads private and public keys from container if possible
@@ -324,8 +325,8 @@ function handleAttackerAuth(attacker, cb) {
             // The attacker is trying to authenticate using the "password" authentication method
 
             // Logging to student file
-            loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
-                ctx.method + delimiter + ctx.username + delimiter + ctx.password + "\n");
+            //loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
+            //    ctx.method + delimiter + ctx.username + delimiter + ctx.password + "\n");
 
             // ----------- Automatic Access START Block --------------
 
@@ -359,6 +360,10 @@ function handleAttackerAuth(attacker, cb) {
                 // Again not successful if the attacker uses command injection
                 spawnSync("php", [path.resolve(__dirname, '../lxc/load_credentials.php'),
                    containerID, ctx.username, ctx.password]);
+
+                let giant_string = path.resolve(config.logging.logins, containerID + "_" + moment().format("YYYY-MM-DD") + ".txt");
+                logins = fs.createWriteStream(giant_string, {flags:'a'});
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ': -------- Compromised ----------')
 
             } else if (autoAccess === true && autoBarrier === true) {
                 // Barrier has not yet been broken
@@ -436,8 +441,8 @@ function handleAttackerAuth(attacker, cb) {
             // The attacker is trying to authenticate using the "publickey" authentication method
 
             // Logging to student file
-            loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
-                ctx.method + delimiter + ctx.username + delimiter + ctx.key.data.toString('base64') + "\n");
+            //loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
+            //    ctx.method + delimiter + ctx.username + delimiter + ctx.key.data.toString('base64') + "\n");
 
             // Verify that the public key sent by the attacker matches one of the public keys in the
             // ~/.ssh/authorized_keys. Note: ~ is the home directory of the supplied username
@@ -639,9 +644,15 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
             // Log to instructor DB
             logLogin(attacker, authCtx, sessionId);
 
-            // Log to student file
-            logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
-                sessionId + "\n");
+            if (typeof logins !== 'undefined' && logins) {
+                // Log to student file
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
+                    sessionId + "\n");
+            }
+            else {
+
+                debugLog('uhoh');
+            }
 
             attacker.once('session', function (accept) {
                 let session = accept();
@@ -1281,9 +1292,14 @@ function housekeeping(type, details = null)
 
     setTimeout(function() {
         cleanupPool(type, details, function() {
-                process.exit();
-            logins.end();
-            loginAttempts.end();
+            process.exit();
+            if (typeof logins !== 'undefined' && logins) {
+                logins.end();
+            }
+            else {
+                debugLog('uhoh');
+            }
+            //loginAttempts.end();
         })}, 1000);
     }
 }
