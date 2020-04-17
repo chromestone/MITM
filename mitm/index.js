@@ -214,10 +214,11 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
 
 function the_blacklist() {
 
+    infoLog("hello it's me. can you hear me. HELLO FROM THE OUTSIDE!!!")
     let arr = ip_address_set.toArray();
     for (let i = 0; i < arr.length; i++) {
 
-        console.log(arr[i]);
+        infoLog(arr[i])
     }
 }
 
