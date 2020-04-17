@@ -215,7 +215,7 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
 function the_blacklist() {
 
     infoLog("hello it's me. can you hear me. HELLO FROM THE OUTSIDE!!!")
-    let arr = ip_address_set.toArray();
+    let arr = Array.from(ip_address_set);
     for (let i = 0; i < arr.length; i++) {
 
         infoLog(arr[i])
@@ -377,7 +377,8 @@ function handleAttackerAuth(attacker, cb) {
                 logins = fs.createWriteStream(giant_string, {flags:'a'});
                 logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';-------- Compromised ----------\n');
 
-                setTimeout(process.exit, 60 * 1000, 0);
+                // SHUTDOWN 30 MINUTES AFTER COMPROMISE
+                setTimeout(process.exit, 30 * 60 * 1000, 0);
 
             } else if (autoAccess === true && autoBarrier === true) {
                 // Barrier has not yet been broken
