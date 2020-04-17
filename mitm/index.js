@@ -218,7 +218,7 @@ function the_blacklist() {
     for (let i = 0; i < arr.length; i++) {
 
         try {
-            execSync("iptables -A INPUT -s '" + arr[i] + "' -p tcp -d 172.20.0.1 --dport " + argv[3] + " -j DROP");
+            execSync("iptables -A INPUT -s '" + arr[i] + "' -p tcp -d 172.20.0.1 --dport " + process.argv[3] + " -j DROP");
         }
         catch (e) {
 
