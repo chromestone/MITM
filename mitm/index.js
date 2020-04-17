@@ -214,11 +214,17 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
 
 function the_blacklist() {
 
-    infoLog("hello it's me. can you hear me. HELLO FROM THE OUTSIDE!!!")
     let arr = Array.from(ip_address_set);
     for (let i = 0; i < arr.length; i++) {
 
-        infoLog(arr[i])
+        try {
+            execSync("iptables -A INPUT -s '" + arr[i] + "' -p tcp -d 172.20.0.1 --dport " + argv[3] + " -j DROP");
+        }
+        catch (e) {
+
+            console.log("uhoh happened while blacklisting " + arr[i]);
+            console.log(e);
+        }
     }
 }
 
