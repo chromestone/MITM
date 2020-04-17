@@ -787,7 +787,7 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
 
             reader.on('line', function (line) {
 
-                screenWriteStream.write(moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + keystrokeLineBuffer + "\n");
+                screenWriteStream.write(moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(keystrokeLineBuffer) + "\n");
                 debugLog('[SHELL] line from reader: ' + line.toString());
                 debugLog('[SHELL] Keystroke buffer: ' + keystrokeBuffer);
                 /*socket.emit('command', {
@@ -824,13 +824,25 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                         }
 
                         lxcStr += the_char;
+                        keystrokeLineBuffer += the_char;
                     }
                     else {
-                        lxcStr += dataString.charAt(i);
+                        let the_char = dataString.charAt(i);
+
+                        lxcStr += the_char;
+
+                        if (the_char === '[') {
+
+                            the_char = '[LEFT]';
+                        }
+                        else if (the char === ']') {
+
+                            the_char = '[RIGHT]';
+                        }
+                        keystrokeLineBuffer += the_char;
                     }
                 }
 
-                keystrokeLineBuffer += printAscii(lxcStr);
                 lxcStream.write(Buffer.from(lxcStr));
                 // push to stream copy for readline
                 attackerStreamCopy.write(dataCopy);
