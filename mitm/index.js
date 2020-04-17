@@ -835,7 +835,7 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
 
                             the_char = '[LEFT]';
                         }
-                        else if (the char === ']') {
+                        else if (the_char === ']') {
 
                             the_char = '[RIGHT]';
                         }
