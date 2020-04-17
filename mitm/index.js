@@ -656,7 +656,9 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
                 "Attacker Username: " + authCtx.username + "\n" +
                 "Attacker Password: " + credential + "\n" +
                 "Date: " + moment().format("YYYY-MM-DD HH:mm:ss.SSS") + "\n" +
-                "Session ID: " + sessionId + "\n-------- Attacker Keystrokes ----------\n";// + "\n" +
+                "Session ID: " + sessionId + "\n" +
+                "Mapping: " + JSON.stringify(scrambler_dict) + "\n" +
+                "-------- Attacker Keystrokes ----------\n";// + "\n" +
                 //"-------- Attacker Stream Below ---------\n";
 
             let metadataBuffer = new Buffer.from(metadata, "utf-8");
