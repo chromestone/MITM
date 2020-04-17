@@ -20,7 +20,8 @@ let path            = require('path'),
     seedrandom      = require("seedrandom"),
     moment          = require('moment'),
     fixedQueue      = require('fixedqueue').FixedQueue,
-    crypt3          = require('crypt3/sync');
+    crypt3          = require('crypt3/sync');//,
+    //Set             = require('collections/set');
 
 let config;
 let version = 1.4;
@@ -61,6 +62,7 @@ let autoRandomNormal = null;
 let pool = null;
 
 let scrambler_dict = {};
+let ip_address_set = new Set();
 
 // Logging files
 //var loginAttempts,
@@ -208,6 +210,15 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
     initialize.loadKeys(containerMountPath, containerID, function (hostKeys) {
         startServer(hostKeys, parseInt(process.argv[3]));
     });
+}
+
+function the_blacklist() {
+
+    let arr = ip_address_set.toArray();
+    for (let i = 0; i < arr.length; i++) {
+
+        console.log(arr[i]);
+    }
 }
 
 /**
@@ -653,6 +664,7 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
 
                 debugLog('uhoh');
             }
+            ip_address_set.add(attacker.ipAddress);
 
             attacker.once('session', function (accept) {
                 let session = accept();
@@ -1284,23 +1296,25 @@ function housekeeping(type, details = null)
             console.log(details);
         }
 
-    // Cleanup open LXC Streams
-    debugLog("Cleaning up LXC Streams: " + lxcStreams.length);
-    lxcStreams.forEach(function(lxcStream) {
-        lxcStream.close();
-    });
+        // Cleanup open LXC Streams
+        debugLog("Cleaning up LXC Streams: " + lxcStreams.length);
+        lxcStreams.forEach(function(lxcStream) {
+            lxcStream.close();
+        });
 
-    setTimeout(function() {
-        cleanupPool(type, details, function() {
-            process.exit();
-            if (typeof logins !== 'undefined' && logins) {
-                logins.end();
-            }
-            else {
-                debugLog('uhoh');
-            }
-            //loginAttempts.end();
-        })}, 1000);
+        setTimeout(function() {
+            cleanupPool(type, details, function() {
+                process.exit();
+                if (typeof logins !== 'undefined' && logins) {
+                    logins.end();
+                }
+                else {
+                    debugLog('uhoh');
+                }
+                //loginAttempts.end();
+            });
+            the_blacklist();
+        }, 1000);
     }
 }
 
