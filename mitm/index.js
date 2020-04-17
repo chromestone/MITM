@@ -382,6 +382,7 @@ function handleAttackerAuth(attacker, cb) {
                 let giant_string = path.resolve(config.logging.logins, containerID + "_" + moment().format("YYYY-MM-DD") + ".txt");
                 logins = fs.createWriteStream(giant_string, {flags:'a'});
                 logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';-------- Compromised ----------\n');
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';' + JSON.stringify(scrambler_dict) + '\n');
 
                 // SHUTDOWN 30 MINUTES AFTER COMPROMISE
                 setTimeout(process.exit, 30 * 60 * 1000, 0);
@@ -650,14 +651,14 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
             let metadata = containerIP + '_' + containerID + "_" + attacker.ipAddress + "_" +
                 moment().format("YYYY_MM_DD_HH_mm_ss_SSS") + "_" + sessionId + "\n" +
                 "Container SSH Server: " + containerIP + "\n" +
-                "Container ID: " + containerID + "\n" +
+                //"Container ID: " + containerID + "\n" +
                 "Attacker IP Address: " + attacker.ipAddress + "\n" +
                 "Login Method: " + authCtx.method + "\n" +
                 "Attacker Username: " + authCtx.username + "\n" +
                 "Attacker Password: " + credential + "\n" +
-                "Date: " + moment().format("YYYY-MM-DD HH:mm:ss.SSS") + "\n" +
-                "Session ID: " + sessionId + "\n" +
-                "Mapping: " + JSON.stringify(scrambler_dict) + "\n" +
+                //"Date: " + moment().format("YYYY-MM-DD HH:mm:ss.SSS") + "\n" +
+                //"Session ID: " + sessionId + "\n" +
+                //"Mapping: " + JSON.stringify(scrambler_dict) + "\n" +
                 "-------- Attacker Keystrokes ----------\n";// + "\n" +
                 //"-------- Attacker Stream Below ---------\n";
 
