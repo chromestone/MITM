@@ -741,7 +741,8 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
           keystrokes : [], // intentionally empty to specify that this is a non-interactive session
           timestamp : new Date()
         });*/
-
+        reject();
+/*
         let execStatement = 'Noninteractive mode attacker command: ' + info.command + '\n--------- Output Below -------\n';
 
         let execStatementBuffer = new Buffer.from(execStatement, "utf-8");
@@ -753,13 +754,14 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
             }
             attackerStream = accept();
             lxcStream.on('data', function (data) {
-                //screenWriteStream.write(data); // log command results to disk
+                screenWriteStream.write(data); // log command results to disk
                 attackerStream.write(data);
             });
             lxcStream.on('close', function () {
                 attackerStream.end();
             });
         });
+*/
     });
 
     // Interactive mode
