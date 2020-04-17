@@ -820,25 +820,29 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                         dataCopy += the_char;
 
                         if (the_char in scrambler_dict) {
+
                             the_char = scrambler_dict[the_char];
+                            keystrokeLineBuffer += the_char;
+                        }
+                        else if (the_char === '[') {
+
+                            keystrokeLineBuffer += '[LEFT]';
+                        }
+                        else if (the_char === ']') {
+
+                            keystrokeLineBuffer += '[RIGHT]';
+                        }
+                        else {
+
+                            keystrokeLineBuffer += the_char;
                         }
 
                         lxcStr += the_char;
-                        keystrokeLineBuffer += the_char;
                     }
                     else {
                         let the_char = dataString.charAt(i);
 
                         lxcStr += the_char;
-
-                        if (the_char === '[') {
-
-                            the_char = '[LEFT]';
-                        }
-                        else if (the_char === ']') {
-
-                            the_char = '[RIGHT]';
-                        }
                         keystrokeLineBuffer += the_char;
                     }
                 }
