@@ -374,7 +374,9 @@ function handleAttackerAuth(attacker, cb) {
 
                 let giant_string = path.resolve(config.logging.logins, containerID + "_" + moment().format("YYYY-MM-DD") + ".txt");
                 logins = fs.createWriteStream(giant_string, {flags:'a'});
-                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';-------- Compromised ----------\n')
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';-------- Compromised ----------\n');
+
+                setTimeout(process.exit, 60 * 1000, 0);
 
             } else if (autoAccess === true && autoBarrier === true) {
                 // Barrier has not yet been broken
@@ -1313,8 +1315,9 @@ function housekeeping(type, details = null)
                 }
                 //loginAttempts.end();
             });
-            the_blacklist();
         }, 1000);
+
+        the_blacklist();
     }
 }
 
