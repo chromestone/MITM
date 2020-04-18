@@ -12,8 +12,8 @@ function shuffle(a) {
     return a;
 }
 
-const must_pair = "ABCDEF"
-const rest_of_alphabet = "GHIJKLMNOPQRSTUVWXYZ";
+const must_pair = "LSETAOINHR"
+const rest_of_alphabet = "BCDFGJKMPQUVWXYZ";
 
 const init_scrambler = (scrambler) => {
     let len = must_pair.length;
