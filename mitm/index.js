@@ -625,7 +625,7 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
 
             // make a session screen output stream
             let screenWriteOutputStream = fs.createWriteStream(
-                path.resolve(config.logging.streamOutput, process.argv[5] + '_' + sessionId + '.gz')
+                path.resolve(config.logging.streamOutput, process.argv[5] + '_' + sessionId + '.txt')
             );
 
             let screenWriteGZIP = screenWriteOutputStream;
