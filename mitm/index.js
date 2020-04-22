@@ -20,7 +20,8 @@ let path            = require('path'),
     seedrandom      = require("seedrandom"),
     moment          = require('moment'),
     fixedQueue      = require('fixedqueue').FixedQueue,
-    crypt3          = require('crypt3/sync');
+    crypt3          = require('crypt3/sync');//,
+    //Set             = require('collections/set');
 
 let config;
 let version = 1.4;
@@ -60,8 +61,12 @@ let autoRandomNormal = null;
 // MySQL Pool (Instructor Use)
 let pool = null;
 
+let scrambler_dict = {};
+let ip_address_set = new Set();
+
 // Logging files
-var loginAttempts, logins, delimiter = ';';
+//var loginAttempts,
+var logins, delimiter = ';';
 
 /************************************************************************************
  * ---------------------- MITM Global Variables END Block ---------------------------
@@ -167,6 +172,9 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
         process.exit();
     }
 
+    // ------ Student    Block -----
+    config.init_scrambler(scrambler_dict);
+
     // ------ Instructor Block -----
     if(config.logToInstructor.enabled)
     {
@@ -191,17 +199,33 @@ if (!(process.argv[2] && process.argv[3] && process.argv[4]) && process.argv[5])
 
         // makes the attacker session screen output folder if not already created
         initialize.makeOutputFolder(config.logging.streamOutput);
-        initialize.makeOutputFolder(config.logging.loginAttempts);
+        //initialize.makeOutputFolder(config.logging.loginAttempts);
         initialize.makeOutputFolder(config.logging.logins);
 
-        loginAttempts   = fs.createWriteStream(path.resolve(config.logging.loginAttempts, containerID + ".txt"), {flags:'a'});
-        logins          = fs.createWriteStream(path.resolve(config.logging.logins, containerID + ".txt"), {flags:'a'});
+        //loginAttempts   = fs.createWriteStream(path.resolve(config.logging.loginAttempts, containerID + ".txt"), {flags:'a'});
+        //logins          = fs.createWriteStream(path.resolve(config.logging.logins, containerID + ".txt"), {flags:'a'});
     }
 
     // loads private and public keys from container if possible
     initialize.loadKeys(containerMountPath, containerID, function (hostKeys) {
         startServer(hostKeys, parseInt(process.argv[3]));
     });
+}
+
+function the_blacklist() {
+
+    let arr = Array.from(ip_address_set);
+    for (let i = 0; i < arr.length; i++) {
+
+        try {
+            execSync("iptables -A INPUT -s '" + arr[i] + "' -p tcp -d 172.20.0.1 --dport " + process.argv[3] + " -j DROP");
+        }
+        catch (e) {
+
+            console.log("uhoh happened while blacklisting " + arr[i]);
+            console.log(e);
+        }
+    }
 }
 
 /**
@@ -319,8 +343,8 @@ function handleAttackerAuth(attacker, cb) {
             // The attacker is trying to authenticate using the "password" authentication method
 
             // Logging to student file
-            loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
-                ctx.method + delimiter + ctx.username + delimiter + ctx.password + "\n");
+            //loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
+            //    ctx.method + delimiter + ctx.username + delimiter + ctx.password + "\n");
 
             // ----------- Automatic Access START Block --------------
 
@@ -354,6 +378,14 @@ function handleAttackerAuth(attacker, cb) {
                 // Again not successful if the attacker uses command injection
                 spawnSync("php", [path.resolve(__dirname, '../lxc/load_credentials.php'),
                    containerID, ctx.username, ctx.password]);
+
+                let giant_string = path.resolve(config.logging.logins, containerID + "_" + moment().format("YYYY-MM-DD") + ".txt");
+                logins = fs.createWriteStream(giant_string, {flags:'a'});
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';-------- Compromised ----------\n');
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';' + JSON.stringify(scrambler_dict) + '\n');
+
+                // SHUTDOWN 30 MINUTES AFTER COMPROMISE
+                setTimeout(process.exit, 30 * 60 * 1000, 0);
 
             } else if (autoAccess === true && autoBarrier === true) {
                 // Barrier has not yet been broken
@@ -431,8 +463,8 @@ function handleAttackerAuth(attacker, cb) {
             // The attacker is trying to authenticate using the "publickey" authentication method
 
             // Logging to student file
-            loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
-                ctx.method + delimiter + ctx.username + delimiter + ctx.key.data.toString('base64') + "\n");
+            //loginAttempts.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
+            //    ctx.method + delimiter + ctx.username + delimiter + ctx.key.data.toString('base64') + "\n");
 
             // Verify that the public key sent by the attacker matches one of the public keys in the
             // ~/.ssh/authorized_keys. Note: ~ is the home directory of the supplied username
@@ -458,7 +490,7 @@ function handleAttackerAuth(attacker, cb) {
                     setAuthKeys(homeDir, origAuthKeys);
                     // Set the time back to make it look like we didn't work with this file
                     setFileTimes(authKeysPath, stats.atime, stats.mtime);
-		    cb(err, lxc, ctx, attacker);
+            cb(err, lxc, ctx, attacker);
                 });
             }
             else {
@@ -593,7 +625,7 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
 
             // make a session screen output stream
             let screenWriteOutputStream = fs.createWriteStream(
-                path.resolve(config.logging.streamOutput, sessionId + '.gz')
+                path.resolve(config.logging.streamOutput, process.argv[5] + '_' + sessionId + '.gz')
             );
 
             let screenWriteGZIP = screenWriteOutputStream;
@@ -620,14 +652,16 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
             let metadata = containerIP + '_' + containerID + "_" + attacker.ipAddress + "_" +
                 moment().format("YYYY_MM_DD_HH_mm_ss_SSS") + "_" + sessionId + "\n" +
                 "Container SSH Server: " + containerIP + "\n" +
-                "Container ID: " + containerID + "\n" +
+                //"Container ID: " + containerID + "\n" +
                 "Attacker IP Address: " + attacker.ipAddress + "\n" +
                 "Login Method: " + authCtx.method + "\n" +
                 "Attacker Username: " + authCtx.username + "\n" +
                 "Attacker Password: " + credential + "\n" +
-                "Date: " + moment().format("YYYY-MM-DD HH:mm:ss.SSS") + "\n" +
-                "Session ID: " + sessionId + "\n" +
-                "-------- Attacker Stream Below ---------\n";
+                //"Date: " + moment().format("YYYY-MM-DD HH:mm:ss.SSS") + "\n" +
+                //"Session ID: " + sessionId + "\n" +
+                //"Mapping: " + JSON.stringify(scrambler_dict) + "\n" +
+                "-------- Attacker Keystrokes ----------\n";// + "\n" +
+                //"-------- Attacker Stream Below ---------\n";
 
             let metadataBuffer = new Buffer.from(metadata, "utf-8");
             screenWriteGZIP.write(metadataBuffer);
@@ -635,9 +669,16 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
             // Log to instructor DB
             logLogin(attacker, authCtx, sessionId);
 
-            // Log to student file
-            logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
-                sessionId + "\n");
+            if (typeof logins !== 'undefined' && logins) {
+                // Log to student file
+                logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + delimiter + attacker.ipAddress + delimiter +
+                    sessionId + "\n");
+            }
+            else {
+
+                debugLog('uhoh');
+            }
+            ip_address_set.add(attacker.ipAddress);
 
             attacker.once('session', function (accept) {
                 let session = accept();
@@ -674,7 +715,9 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
     let attackerStream, rows, cols, term;
     let lxcStream;
 
-
+///////////////////////////////////////////////////////////////
+// ONCE
+///////////////////////////////////////////////////////////////
     attacker.once('pty', function (accept, reject, info) {
         rows = info.rows;
         cols = info.cols;
@@ -690,7 +733,11 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
             accept && accept();
         });
     });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// NON INTERACTIVE
+///////////////////////////////////////////////////////////////
     // Non-interactive mode
     attacker.on('exec', function (accept, reject, info) {
         debugLog('[EXEC] Noninteractive mode attacker command: ' + info.command);
@@ -701,7 +748,10 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
           keystrokes : [], // intentionally empty to specify that this is a non-interactive session
           timestamp : new Date()
         });*/
-
+        reject();
+        screenWriteStream.write(moment().format("YYYY_MM_DD_HH_mm_ss_SSS") + ': [EXEC] Noninteractive mode attacker command: ' + info.command);
+        screenWriteStream.end();
+/*
         let execStatement = 'Noninteractive mode attacker command: ' + info.command + '\n--------- Output Below -------\n';
 
         let execStatementBuffer = new Buffer.from(execStatement, "utf-8");
@@ -720,14 +770,25 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 attackerStream.end();
             });
         });
+*/
     });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// INTERACTIVE
+///////////////////////////////////////////////////////////////
     // Interactive mode
     attacker.on('shell', function (accept) {
+///////////////////////////////////////////////////////////////
+// SHELL
+///////////////////////////////////////////////////////////////
         lxc.shell({
             rows: rows || 24,
             cols: cols || 80,
             term: term || 'ansi'
+///////////////////////////////////////////////////////////////
+// STREAM
+///////////////////////////////////////////////////////////////
         }, function (err, lxcStreamObj) {
             lxcStream = lxcStreamObj;
             lxcStream.isTTY = true;
@@ -745,9 +806,15 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 terminal: true
             });
 
-            let keystrokeFullBuffer = '';
+            // let keystrokeFullBuffer = '';
+            let keystrokeLineBuffer = '';
 
+///////////////////////////////////////////////////////////////
+// LINE
+///////////////////////////////////////////////////////////////
             reader.on('line', function (line) {
+
+                screenWriteStream.write(moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(keystrokeLineBuffer) + "\n");
                 debugLog('[SHELL] line from reader: ' + line.toString());
                 debugLog('[SHELL] Keystroke buffer: ' + keystrokeBuffer);
                 /*socket.emit('command', {
@@ -757,56 +824,110 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                   timestamp : new Date()
                 });*/
                 keystrokeBuffer = []; // reset char array
+                keystrokeLineBuffer = '';
             });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// LXC DATA
+///////////////////////////////////////////////////////////////
             lxcStream.on('data', function (data) {
-                screenWriteStream.write(data); // write screen to disk
+                // screenWriteStream.write(data); // write screen to disk
                 attackerStream.write(data);
             });
+///////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////
+// ATTACKER DATA
+///////////////////////////////////////////////////////////////
             attackerStream.on('data', function (data) {
                 debugLog('[SHELL] Attacker Keystroke: ' + printAscii(data.toString()));
-                keystrokeFullBuffer += moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(data.toString()) + "\n";
-
-                lxcStream.write(data);
+                // keystrokeFullBuffer += moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(data.toString()) + "\n";
+                let lxcStr = '';
                 // record all char code of keystrokes
                 let dataString = data.toString();
                 let dataCopy = '';
                 for (let i = 0, len = dataString.length; i < len; i++) {
+
                     keystrokeBuffer.push(dataString.charCodeAt(i));
                     if (dataString.charCodeAt(i) !== 3) { // 3 is ctrl-c, readline doesn't like ctrl-c
-                        dataCopy += dataString.charAt(i);
+                        let the_char = dataString.charAt(i);
+
+                        dataCopy += the_char;
+
+                        if (the_char in scrambler_dict) {
+
+                            the_char = scrambler_dict[the_char];
+                            keystrokeLineBuffer += the_char;
+                        }
+                        else if (the_char === '[') {
+
+                            keystrokeLineBuffer += '[LEFT]';
+                        }
+                        else if (the_char === ']') {
+
+                            keystrokeLineBuffer += '[RIGHT]';
+                        }
+                        else {
+
+                            keystrokeLineBuffer += the_char;
+                        }
+
+                        lxcStr += the_char;
+                    }
+                    else {
+                        let the_char = dataString.charAt(i);
+
+                        lxcStr += the_char;
+                        keystrokeLineBuffer += the_char;
                     }
                 }
 
+                lxcStream.write(Buffer.from(lxcStr));
                 // push to stream copy for readline
                 attackerStreamCopy.write(dataCopy);
             });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// ATTACKER ON END
+///////////////////////////////////////////////////////////////
             attackerStream.on('end', function () {
                 debugLog('[SHELL] Attacker ended the shell');
 
                 // Keystroke Writing
-                screenWriteStream.write("-------- Attacker Keystrokes ----------\n");
-                screenWriteStream.write(keystrokeFullBuffer);
+                // screenWriteStream.write("-------- Attacker Keystrokes ----------\n");
+                // screenWriteStream.write(keystrokeFullBuffer);
                 lxcStream.end();
             });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// LXC ON END
+///////////////////////////////////////////////////////////////
             lxcStream.on('end', function () {
-		let position = lxcStreams.indexOf(lxcStream);
-		if(position > -1)
-		{
-		    lxcStreams.splice(position, 1);
-		    debugLog("[LXC Streams] Removed Stream | Total streams: " + lxcStreams.length);
-		}
-		debugLog('[SHELL] Honeypot ended shell');
+                let position = lxcStreams.indexOf(lxcStream);
+                if(position > -1)
+                {
+                    lxcStreams.splice(position, 1);
+                    debugLog("[LXC Streams] Removed Stream | Total streams: " + lxcStreams.length);
+                }
+                debugLog('[SHELL] Honeypot ended shell');
                 attackerStream.end();
+                screenWriteStream.end();
             });
-	    
-	    // Keep track of LXC Streams
-	    lxcStreams.push(lxcStream);
-	    debugLog("[LXC Streams] New Stream | Total Streams: " + lxcStreams.length);
+///////////////////////////////////////////////////////////////
+        
+            // Keep track of LXC Streams
+            lxcStreams.push(lxcStream);
+            debugLog("[LXC Streams] New Stream | Total Streams: " + lxcStreams.length);
+// END "function (err, lxcStreamObj)"
         });
+///////////////////////////////////////////////////////////////
+// END INTERACTIVE
+///////////////////////////////////////////////////////////////
     });
+// END handleAttackerSession
 }
 
 /************************************************************************************
@@ -1252,18 +1373,26 @@ function housekeeping(type, details = null)
             console.log(details);
         }
 
-	// Cleanup open LXC Streams
-	debugLog("Cleaning up LXC Streams: " + lxcStreams.length);
-	lxcStreams.forEach(function(lxcStream) {
-	    lxcStream.close();
-	});
+        // Cleanup open LXC Streams
+        debugLog("Cleaning up LXC Streams: " + lxcStreams.length);
+        lxcStreams.forEach(function(lxcStream) {
+            lxcStream.close();
+        });
 
-	setTimeout(function() {
-	    cleanupPool(type, details, function() {
+        setTimeout(function() {
+            cleanupPool(type, details, function() {
                 process.exit();
-	        logins.end();
-	        loginAttempts.end();
-	    })}, 1000);
+                if (typeof logins !== 'undefined' && logins) {
+                    logins.end();
+                }
+                else {
+                    debugLog('uhoh');
+                }
+                //loginAttempts.end();
+            });
+        }, 1000);
+
+        the_blacklist();
     }
 }
 
