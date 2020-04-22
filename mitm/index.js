@@ -748,6 +748,8 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
           timestamp : new Date()
         });*/
         reject();
+        screenWriteStream.write(moment().format("YYYY_MM_DD_HH_mm_ss_SSS") + ': [EXEC] Noninteractive mode attacker command: ' + info.command);
+        screenWriteStream.end();
 /*
         let execStatement = 'Noninteractive mode attacker command: ' + info.command + '\n--------- Output Below -------\n';
 
