@@ -714,7 +714,9 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
     let attackerStream, rows, cols, term;
     let lxcStream;
 
-
+///////////////////////////////////////////////////////////////
+// ONCE
+///////////////////////////////////////////////////////////////
     attacker.once('pty', function (accept, reject, info) {
         rows = info.rows;
         cols = info.cols;
@@ -730,7 +732,11 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
             accept && accept();
         });
     });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// NON INTERACTIVE
+///////////////////////////////////////////////////////////////
     // Non-interactive mode
     attacker.on('exec', function (accept, reject, info) {
         debugLog('[EXEC] Noninteractive mode attacker command: ' + info.command);
@@ -763,13 +769,23 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
         });
 */
     });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// INTERACTIVE
+///////////////////////////////////////////////////////////////
     // Interactive mode
     attacker.on('shell', function (accept) {
+///////////////////////////////////////////////////////////////
+// SHELL
+///////////////////////////////////////////////////////////////
         lxc.shell({
             rows: rows || 24,
             cols: cols || 80,
             term: term || 'ansi'
+///////////////////////////////////////////////////////////////
+// STREAM
+///////////////////////////////////////////////////////////////
         }, function (err, lxcStreamObj) {
             lxcStream = lxcStreamObj;
             lxcStream.isTTY = true;
@@ -790,6 +806,9 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
             // let keystrokeFullBuffer = '';
             let keystrokeLineBuffer = '';
 
+///////////////////////////////////////////////////////////////
+// LINE
+///////////////////////////////////////////////////////////////
             reader.on('line', function (line) {
 
                 screenWriteStream.write(moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(keystrokeLineBuffer) + "\n");
@@ -804,11 +823,20 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 keystrokeBuffer = []; // reset char array
                 keystrokeLineBuffer = '';
             });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// LXC DATA
+///////////////////////////////////////////////////////////////
             lxcStream.on('data', function (data) {
                 // screenWriteStream.write(data); // write screen to disk
                 attackerStream.write(data);
             });
+///////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////
+// ATTACKER DATA
+///////////////////////////////////////////////////////////////
             attackerStream.on('data', function (data) {
                 debugLog('[SHELL] Attacker Keystroke: ' + printAscii(data.toString()));
                 // keystrokeFullBuffer += moment().format('YYYY-MM-DD HH:mm:ss.SSS') + ': ' + printAscii(data.toString()) + "\n";
@@ -856,7 +884,11 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 // push to stream copy for readline
                 attackerStreamCopy.write(dataCopy);
             });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// ATTACKER ON END
+///////////////////////////////////////////////////////////////
             attackerStream.on('end', function () {
                 debugLog('[SHELL] Attacker ended the shell');
 
@@ -865,23 +897,34 @@ function handleAttackerSession(attacker, lxc, sessionId, screenWriteStream) {
                 // screenWriteStream.write(keystrokeFullBuffer);
                 lxcStream.end();
             });
+///////////////////////////////////////////////////////////////
 
+///////////////////////////////////////////////////////////////
+// LXC ON END
+///////////////////////////////////////////////////////////////
             lxcStream.on('end', function () {
-        let position = lxcStreams.indexOf(lxcStream);
-        if(position > -1)
-        {
-            lxcStreams.splice(position, 1);
-            debugLog("[LXC Streams] Removed Stream | Total streams: " + lxcStreams.length);
-        }
-        debugLog('[SHELL] Honeypot ended shell');
+                let position = lxcStreams.indexOf(lxcStream);
+                if(position > -1)
+                {
+                    lxcStreams.splice(position, 1);
+                    debugLog("[LXC Streams] Removed Stream | Total streams: " + lxcStreams.length);
+                }
+                debugLog('[SHELL] Honeypot ended shell');
                 attackerStream.end();
+                screenWriteStream.end();
             });
+///////////////////////////////////////////////////////////////
         
-        // Keep track of LXC Streams
-        lxcStreams.push(lxcStream);
-        debugLog("[LXC Streams] New Stream | Total Streams: " + lxcStreams.length);
+            // Keep track of LXC Streams
+            lxcStreams.push(lxcStream);
+            debugLog("[LXC Streams] New Stream | Total Streams: " + lxcStreams.length);
+// END "function (err, lxcStreamObj)"
         });
+///////////////////////////////////////////////////////////////
+// END INTERACTIVE
+///////////////////////////////////////////////////////////////
     });
+// END handleAttackerSession
 }
 
 /************************************************************************************
