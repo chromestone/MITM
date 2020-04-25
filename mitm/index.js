@@ -625,12 +625,13 @@ function handleAttackerAuthCallback(err, lxc, authCtx, attacker)
 
             // make a session screen output stream
             let screenWriteOutputStream = fs.createWriteStream(
-                path.resolve(config.logging.streamOutput, process.argv[5] + '_' + sessionId + '.gz')
+                path.resolve(config.logging.streamOutput, process.argv[5] + '_' + sessionId + '.txt')
             );
 
+            let screenWriteGZIP = screenWriteOutputStream;
             // Make a Gzip handler to automatically compress the file on the fly
-            let screenWriteGZIP = zlib.createGzip();
-            screenWriteGZIP.pipe(screenWriteOutputStream);
+            //let screenWriteGZIP = zlib.createGzip();
+            //screenWriteGZIP.pipe(screenWriteOutputStream);
 
             /*let year = dateTime.getFullYear(), month = ("0" + dateTime.getMonth()).slice(-2),
                 date = ("0" + dateTime.getDate()).slice(-2), hour = ("0" + dateTime.getHours()).slice(-2),
