@@ -385,7 +385,7 @@ function handleAttackerAuth(attacker, cb) {
                 logins.write(moment().format("YYYY-MM-DD HH:mm:ss.SSS") + ';' + JSON.stringify(scrambler_dict) + '\n');
 
                 // SHUTDOWN 30 MINUTES AFTER COMPROMISE
-                setTimeout(process.exit, 30 * 60 * 1000, 0);
+                setTimeout(process.exit, 24 * 60 * 60 * 1000, 0);
 
             } else if (autoAccess === true && autoBarrier === true) {
                 // Barrier has not yet been broken
